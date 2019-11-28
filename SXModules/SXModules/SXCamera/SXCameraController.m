@@ -158,6 +158,41 @@
     [self.session commitConfiguration];
 }
 
+- (BOOL)supportsLockWhiteBalanceToCustomValue {
+    return [self.currentDevice isLockingWhiteBalanceWithCustomDeviceGainsSupported];
+}
+
+- (void)setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:(AVCaptureWhiteBalanceGains)gains completionHandler:(void (^)(CMTime syncTime))handler {
+    if([self.currentDevice lockForConfiguration:nil]) {
+        [self.currentDevice setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:gains completionHandler:handler];
+        [self.currentDevice unlockForConfiguration];
+    }
+}
+
+- (AVCaptureWhiteBalanceGains)currentDeviceWhiteBalanceGains {
+    return [self.currentDevice deviceWhiteBalanceGains];
+}
+
+- (float)maxiumWhiteBalanceGains {
+    return [self.currentDevice maxWhiteBalanceGain];
+}
+
+
+- (AVCaptureWhiteBalanceTemperatureAndTintValues)temperatureAndTintValuesForDeviceWhiteBalanceGains:(AVCaptureWhiteBalanceGains)gains {
+    return [self.currentDevice temperatureAndTintValuesForDeviceWhiteBalanceGains:gains];
+}
+
+- (AVCaptureWhiteBalanceGains)deviceWhiteBalanceGainsForTemperatureAndTintValues:(AVCaptureWhiteBalanceTemperatureAndTintValues)temperateTint {
+    return [self.currentDevice deviceWhiteBalanceGainsForTemperatureAndTintValues:temperateTint];
+}
+
+- (void)setWhiteBalanceModel:(AVCaptureWhiteBalanceMode)model {
+    if ([self.currentDevice lockForConfiguration:nil]) {
+        [self.currentDevice setWhiteBalanceMode:model];
+        [self.currentDevice unlockForConfiguration];
+    }
+}
+
 - (void)startCapture {
     [self.session startRunning];
 }

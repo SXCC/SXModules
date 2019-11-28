@@ -23,6 +23,15 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setSessionPreset:(AVCaptureSessionPreset)preset;
 - (void)setVideoDataOrientation:(AVCaptureVideoOrientation)orientation;
 - (void)setVideoMirror:(BOOL)mirror;
+//   White Balance
+- (BOOL)supportsLockWhiteBalanceToCustomValue;
+- (void)setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:(AVCaptureWhiteBalanceGains)gains completionHandler:(void (^)(CMTime syncTime))handler;
+- (AVCaptureWhiteBalanceGains)currentDeviceWhiteBalanceGains;
+- (float)maxiumWhiteBalanceGains;
+- (AVCaptureWhiteBalanceTemperatureAndTintValues)temperatureAndTintValuesForDeviceWhiteBalanceGains:(AVCaptureWhiteBalanceGains)gains;
+- (AVCaptureWhiteBalanceGains)deviceWhiteBalanceGainsForTemperatureAndTintValues:(AVCaptureWhiteBalanceTemperatureAndTintValues)temperateTint;
+- (void)setWhiteBalanceModel:(AVCaptureWhiteBalanceMode)model;
+
 // Camera Control
 - (void)startCapture;
 - (void)stopCapture;
