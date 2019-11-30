@@ -17,7 +17,7 @@ typedef struct {
 } QuadVertexOut;
 
 vertex QuadVertexOut
-drawSampleBufferVertexShader(uint vertexID [[vertex_id]],
+drawQuadVertexShader(uint vertexID [[vertex_id]],
                              constant Vertex* vertices [[buffer(0)]]) {
     
     QuadVertexOut out;
@@ -28,7 +28,7 @@ drawSampleBufferVertexShader(uint vertexID [[vertex_id]],
 }
 
 fragment float4
-drawSampleBufferFragmentShader(QuadVertexOut in [[stage_in]],
+drawQuadFragmentShader(QuadVertexOut in [[stage_in]],
                                texture2d<half> texture [[texture(0)]]) {
 
     constexpr sampler textureSampler (mag_filter::linear,

@@ -14,8 +14,7 @@
 		89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89391FEF2388D5C10074B3EC /* SXVideoRenderView.mm */; };
 		89391FF32388D62B0074B3EC /* ShaderTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FF22388D62B0074B3EC /* ShaderTypes.h */; };
 		89391FF82388D6840074B3EC /* DrawPoints.metal in Sources */ = {isa = PBXBuildFile; fileRef = 89391FF52388D6840074B3EC /* DrawPoints.metal */; };
-		89391FF92388D6840074B3EC /* DrawSampleBuffer.metal in Sources */ = {isa = PBXBuildFile; fileRef = 89391FF62388D6840074B3EC /* DrawSampleBuffer.metal */; };
-		89391FFA2388D6840074B3EC /* DrawTargetTexture.metal in Sources */ = {isa = PBXBuildFile; fileRef = 89391FF72388D6840074B3EC /* DrawTargetTexture.metal */; };
+		89391FF92388D6840074B3EC /* DrawQuad.metal in Sources */ = {isa = PBXBuildFile; fileRef = 89391FF62388D6840074B3EC /* DrawQuad.metal */; };
 		89391FFD2388D6B50074B3EC /* SXCameraController.m in Sources */ = {isa = PBXBuildFile; fileRef = 89391FFB2388D6B50074B3EC /* SXCameraController.m */; };
 		89391FFE2388D6B50074B3EC /* SXCameraController.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FFC2388D6B50074B3EC /* SXCameraController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		893920012388DB660074B3EC /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 893920002388DB660074B3EC /* MetalKit.framework */; };
@@ -32,7 +31,7 @@
 		89391FEF2388D5C10074B3EC /* SXVideoRenderView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SXVideoRenderView.mm; sourceTree = "<group>"; };
 		89391FF22388D62B0074B3EC /* ShaderTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShaderTypes.h; sourceTree = "<group>"; };
 		89391FF52388D6840074B3EC /* DrawPoints.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = DrawPoints.metal; sourceTree = "<group>"; };
-		89391FF62388D6840074B3EC /* DrawSampleBuffer.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = DrawSampleBuffer.metal; sourceTree = "<group>"; };
+		89391FF62388D6840074B3EC /* DrawQuad.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = DrawQuad.metal; sourceTree = "<group>"; };
 		89391FF72388D6840074B3EC /* DrawTargetTexture.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = DrawTargetTexture.metal; sourceTree = "<group>"; };
 		89391FFB2388D6B50074B3EC /* SXCameraController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SXCameraController.m; sourceTree = "<group>"; };
 		89391FFC2388D6B50074B3EC /* SXCameraController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SXCameraController.h; sourceTree = "<group>"; };
@@ -106,7 +105,7 @@
 			children = (
 				89391FF22388D62B0074B3EC /* ShaderTypes.h */,
 				89391FF52388D6840074B3EC /* DrawPoints.metal */,
-				89391FF62388D6840074B3EC /* DrawSampleBuffer.metal */,
+				89391FF62388D6840074B3EC /* DrawQuad.metal */,
 				89391FF72388D6840074B3EC /* DrawTargetTexture.metal */,
 				893920022388EFB30074B3EC /* BlendMaskFilter.metal */,
 			);
@@ -205,9 +204,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				89391FF82388D6840074B3EC /* DrawPoints.metal in Sources */,
-				89391FF92388D6840074B3EC /* DrawSampleBuffer.metal in Sources */,
+				89391FF92388D6840074B3EC /* DrawQuad.metal in Sources */,
 				89391FFD2388D6B50074B3EC /* SXCameraController.m in Sources */,
-				89391FFA2388D6840074B3EC /* DrawTargetTexture.metal in Sources */,
 				890EC4802391072500982CAB /* SXCameraUtil.m in Sources */,
 				89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */,
 				893920032388EFB30074B3EC /* BlendMaskFilter.metal in Sources */,

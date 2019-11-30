@@ -16,19 +16,23 @@
 //
 @property (strong, nonatomic) id<MTLBuffer> drawQuadVertexBuffer;
 // 自定义Draw的渲染目标纹理
-@property (strong, nonatomic) id<MTLTexture> targetTexture;
-@property (strong, nonatomic) MTLRenderPassDescriptor *targetTextureRenderDesc;
-// 覆盖渲染相机SampleBuffer到targetTexture
+@property (strong, nonatomic) id<MTLTexture> intermediateTexture;
+@property (strong, nonatomic) MTLRenderPassDescriptor *intermediateTextureRenderDesc;
+@property (assign, nonatomic) MTLViewport intermediateDrawCallViewPort;
+// 覆盖渲染相机SampleBuffer到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawSampleBufferPipelineState;
-// 叠加渲染归一化特征点到targetTexture
+// 叠加渲染归一化特征点到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawNormalizedPointsPipelineState;
 @property (strong, nonatomic) id<MTLBuffer> drawPointBuffer;
-// 叠加渲染mask到targetTexture
+// 叠加渲染mask到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> blendMaskPipelineState;
 
-// 渲染target texture到MTKView
-@property (strong, nonatomic) id<MTLRenderPipelineState> renderViewBGPipelineState;
-@property (strong, nonatomic) id<MTLBuffer> renderViewBGVertexBuffer;
+// 渲染intermediate texture到MTKView
+@property (strong, nonatomic) id<MTLRenderPipelineState> screenRenderPipelineState;
+
+// 渲染intermediate texture到CVPixelBuffer
+@property (strong, nonatomic) id<MTLRenderPipelineState> pixelBufferRenderPipelineState;
+@property (strong, nonatomic) MTLRenderPassDescriptor* pixelBufferRenderPassDesc;
 
 @property (assign, nonatomic) CVMetalTextureCacheRef textureCache;
 @end
@@ -66,9 +70,10 @@
             NSLog(@"[SXVideoRenderView init:][Error]: Failed to create texture cache");
             return nil;
         }
-        [self setupTargetTextureRenderPipeline:bufferSize];
+        [self setupIntermediateTextureRenderPipeline:bufferSize];
+        [self setupPixelBufferRenderPipelineState];
         [self setupCommonBuffers];
-        [self setupRenderViewBGPipeline];
+        [self setupScreenRenderPipeline];
         [self setupDrawPointPipeline];
         [self setupMaskBlendRenderPipeline];
         [self setPaused:true];
@@ -77,18 +82,19 @@
     return self;
 }
 
-
+#pragma mark - draw calls
 - (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     [self drawPixelBuffer:pixelBuffer];
 }
 
 - (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer {
-    self.targetTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
+    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
     id<MTLRenderCommandEncoder> renderCmdEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:self.targetTextureRenderDesc];
+        [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
     [renderCmdEncoder setRenderPipelineState:self.drawSampleBufferPipelineState];
+    [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
     [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
     id<MTLTexture> texture = [self textureFromPixelBuffer:pixelBuffer];
     [renderCmdEncoder setFragmentTexture:texture atIndex:0];
@@ -118,10 +124,11 @@
     free(buffer);
     
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-    self.targetTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留targetTexture已有内容
+    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留intermediateTexture已有内容
     id<MTLRenderCommandEncoder> renderCmdEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:self.targetTextureRenderDesc];
+        [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
     [renderCmdEncoder setRenderPipelineState:self.drawNormalizedPointsPipelineState];
+    [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
     [renderCmdEncoder setVertexBuffer:self.drawPointBuffer offset:0 atIndex:0];
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sum];
     [renderCmdEncoder endEncoding];
@@ -159,13 +166,14 @@
                    bytesPerRow:rowBytes];
     
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-    self.targetTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留targetTexture已有内容
+    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留intermediateTexture已有内容
     id<MTLRenderCommandEncoder> renderCmdEncoder =
-        [commandBuffer renderCommandEncoderWithDescriptor:self.targetTextureRenderDesc];
+        [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
     [renderCmdEncoder setRenderPipelineState:self.blendMaskPipelineState];
+    [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
     [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
 
-    [renderCmdEncoder setFragmentTexture:self.targetTexture atIndex:0]; // input and output
+    [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:0]; // input and output
     [renderCmdEncoder setFragmentTexture:maskTexture atIndex:1];
     
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
@@ -174,6 +182,16 @@
     
 }
 
+#pragma mark - draw call configs
+- (void)setViewPort:(MTLViewport)newViewPort {
+    self.intermediateDrawCallViewPort = newViewPort;
+}
+
+- (void)clearViewPortToDefault {
+    self.intermediateDrawCallViewPort = {0, 0, static_cast<double>(self.intermediateTexture.width), static_cast<double>(self.intermediateTexture.height), 0, 1};
+}
+
+#pragma mark - output
 - (void)renderToScreen {
     [self setNeedsDisplay];
 }
@@ -188,13 +206,30 @@
         // draw background
         id<MTLRenderCommandEncoder> renderCmdEncoder =
             [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-        [renderCmdEncoder setRenderPipelineState:self.renderViewBGPipelineState];
+        [renderCmdEncoder setRenderPipelineState:self.screenRenderPipelineState];
         [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
-        [renderCmdEncoder setFragmentTexture:self.targetTexture atIndex:0];
+        [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:0];
         [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
         [renderCmdEncoder endEncoding];
         [commandBuffer presentDrawable:self.currentDrawable];
     }
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+}
+
+- (void)renderToPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+    // get texture from pixelbuffer
+    id<MTLTexture> targetTexture = [self textureFromPixelBuffer:pixelBuffer];
+    // create render pipeline
+    self.pixelBufferRenderPassDesc.colorAttachments[0].texture = targetTexture;
+    
+    id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
+    id<MTLRenderCommandEncoder> renderCmdEncoder = [commandBuffer renderCommandEncoderWithDescriptor:self.pixelBufferRenderPassDesc];
+    [renderCmdEncoder setRenderPipelineState:self.pixelBufferRenderPipelineState];
+    [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
+    [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:0];
+    [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+    [renderCmdEncoder endEncoding];
     [commandBuffer commit];
     [commandBuffer waitUntilCompleted];
 }
@@ -215,20 +250,11 @@
                                               MTLPixelFormatBGRA8Unorm,
                                               width, height, 0, &textureRef);
     if (textureRef == nil) {
-        MTLTextureDescriptor* textureDesc = [[MTLTextureDescriptor alloc] init];
-        textureDesc.width = width;
-        textureDesc.height = height;
-        textureDesc.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        id<MTLTexture> texture = [self.device newTextureWithDescriptor:textureDesc];
-        CVPixelBufferLockBaseAddress(pixelBuffer, 0);
-        unsigned char* addr = (unsigned char*)CVPixelBufferGetBaseAddress(pixelBuffer);
-        [texture replaceRegion:{{0, 0, 0},  {static_cast<NSUInteger>(width), static_cast<NSUInteger>(height), 1}} mipmapLevel:0 withBytes:addr bytesPerRow:CVPixelBufferGetBytesPerRow(pixelBuffer)];
-        return texture;
-    } else {
-        id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
-        CFRelease(textureRef);
-        return texture;
+        abort();
     }
+    id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
+    CFRelease(textureRef);
+    return texture;
 }
 
 - (void)setupCommonBuffers {
@@ -243,16 +269,16 @@
     memcpy(self.drawQuadVertexBuffer.contents, vertex, sizeof(Vertex) * 4);
 }
 
-- (void)setupRenderViewBGPipeline {
-    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawTargetTextureVertexShader"];
-    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawTargetTextureFragmentShader"];
+- (void)setupScreenRenderPipeline {
+    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawQuadVertexShader"];
+    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawQuadFragmentShader"];
 
     MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
     pipelineDesc.colorAttachments[0].pixelFormat = self.colorPixelFormat;
     pipelineDesc.vertexFunction = vertexFunc;
     pipelineDesc.fragmentFunction = fragFunc;
     NSError *error;
-    self.renderViewBGPipelineState =
+    self.screenRenderPipelineState =
         [self.device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
     if (error) {
       NSLog(@"%@", [error localizedDescription]);
@@ -279,21 +305,23 @@
     }
 }
 
-- (void)setupTargetTextureRenderPipeline:(CGSize)size {
+- (void)setupIntermediateTextureRenderPipeline:(CGSize)size {
     MTLTextureDescriptor *textureDesc = [[MTLTextureDescriptor alloc] init];
     textureDesc.width = size.width;
     textureDesc.height = size.height;
     textureDesc.pixelFormat = MTLPixelFormatBGRA8Unorm;
     textureDesc.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite | MTLTextureUsageRenderTarget;
-    self.targetTexture = [self.device newTextureWithDescriptor:textureDesc];
+    self.intermediateTexture = [self.device newTextureWithDescriptor:textureDesc];
 
-    self.targetTextureRenderDesc = [[MTLRenderPassDescriptor alloc] init];
-    self.targetTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-    self.targetTextureRenderDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    self.targetTextureRenderDesc.colorAttachments[0].texture = self.targetTexture;
+    self.intermediateTextureRenderDesc = [[MTLRenderPassDescriptor alloc] init];
+    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+    self.intermediateTextureRenderDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    self.intermediateTextureRenderDesc.colorAttachments[0].texture = self.intermediateTexture;
+    
+    self.intermediateDrawCallViewPort = {0, 0, static_cast<double>(textureDesc.width), static_cast<double>(textureDesc.height), 0, 1};
 
-    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawSampleBufferVertexShader"];
-    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawSampleBufferFragmentShader"];
+    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawQuadVertexShader"];
+    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawQuadFragmentShader"];
 
     MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
     pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -307,6 +335,30 @@
        abort();
     }
 }
+
+- (void)setupPixelBufferRenderPipelineState {
+    self.pixelBufferRenderPassDesc = [[MTLRenderPassDescriptor alloc] init];
+    self.pixelBufferRenderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
+    self.pixelBufferRenderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    
+    MTLRenderPipelineDescriptor* pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+    
+    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawQuadVertexShader"];
+    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawQuadFragmentShader"];
+    pipelineDesc.vertexFunction = vertexFunc;
+    pipelineDesc.fragmentFunction = fragFunc;
+    
+    NSError *error;
+    self.pixelBufferRenderPipelineState =
+        [self.device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
+    if (error) {
+       NSLog(@"%@", [error localizedDescription]);
+       abort();
+    }
+}
+
+
 
 - (void)setupMaskBlendRenderPipeline {
     id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"blendMaskVertexShader"];

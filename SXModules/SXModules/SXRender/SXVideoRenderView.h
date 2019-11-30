@@ -17,11 +17,19 @@ NS_ASSUME_NONNULL_BEGIN
              Device:(id<MTLDevice>)device
         LibraryPath:(NSString * _Nullable)libraryPath
          BufferSize:(CGSize)bufferSize;
+
+// draw calls
 - (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 - (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints;
 - (void)blendMask:(unsigned char*)maskBytes Width:(int)width Height:(int)height Channels:(int)channels BytesPerRow:(int)rowBytes;
+// draw call configs
+- (void)setViewPort:(MTLViewport)newViewPort;
+- (void)clearViewPortToDefault;
+// output
 - (void)renderToScreen;
+- (void)renderToPixelBuffer:(CVPixelBufferRef)pixelBuffer;
+
 @end
 
 NS_ASSUME_NONNULL_END

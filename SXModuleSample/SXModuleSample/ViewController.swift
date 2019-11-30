@@ -129,4 +129,12 @@ extension ViewController: SXCameraControllerDataDelegate {
     func depthDataOutput(_ output: AVCaptureDepthDataOutput, didOutput depthData: AVDepthData, timestamp: CMTime, connection: AVCaptureConnection) {
         print("got depth data")
     }
+    
+    func createPixelBuffer() -> CVPixelBuffer {
+        var buffer: CVPixelBuffer? = nil
+        CVPixelBufferCreate(kCFAllocatorDefault, 720, 1280, kCVPixelFormatType_32BGRA, [kCVPixelBufferMetalCompatibilityKey: true] as CFDictionary
+            , &buffer)
+        return buffer!
+    }
+    
 }
