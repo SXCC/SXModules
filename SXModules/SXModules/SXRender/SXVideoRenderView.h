@@ -19,8 +19,8 @@ NS_ASSUME_NONNULL_BEGIN
          BufferSize:(CGSize)bufferSize;
 
 // draw calls
-- (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer;
-- (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer;
+- (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer CleanBuffer:(BOOL)clean;
+- (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer CleanBuffer:(BOOL)clean;
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints;
 - (void)blendMask:(unsigned char*)maskBytes Width:(int)width Height:(int)height Channels:(int)channels BytesPerRow:(int)rowBytes;
 // draw call configs

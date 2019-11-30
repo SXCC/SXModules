@@ -83,13 +83,17 @@
 }
 
 #pragma mark - draw calls
-- (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer {
+- (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer CleanBuffer:(BOOL)clean {
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    [self drawPixelBuffer:pixelBuffer];
+    [self drawPixelBuffer:pixelBuffer CleanBuffer:clean];
 }
 
-- (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer {
-    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
+- (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer CleanBuffer:(BOOL)clean {
+    if (clean) {
+        self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
+    } else {
+        self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;
+    }
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
     id<MTLRenderCommandEncoder> renderCmdEncoder =
         [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
