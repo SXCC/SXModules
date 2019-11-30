@@ -14,6 +14,7 @@ class ViewController: UIViewController {
     
     var renderView: SXVideoRenderView!
     var camera: SXCameraController!
+    var movieRecorder: SXMovieRecorder!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -37,12 +38,12 @@ class ViewController: UIViewController {
         if targetFormats.count > 0 {
             let targetFormat = targetFormats.first!
             camera.setActiveDeviceFormat(targetFormat)
-//            if let depthFormat = SXCameraUtil.depthDataFormat(targetFormat.supportedDepthDataFormats) { // Still has bug
-//                camera.setActiveDepthDataFormat(depthFormat)
-//                camera.setDepthDataOutput()
-//            }
         }
         
+        let filePath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/video.mov"
+        do { try FileManager.default.removeItem(atPath: filePath) } catch {} // remove file if already exists
+        movieRecorder = SXMovieRecorder(path: filePath, fileType: .mov, videoSize: CGSize(width: 720, height: 1280), frameRate: 30, bitRate: 3500000)
+            
         setupControls()
     }
     
@@ -94,6 +95,16 @@ class ViewController: UIViewController {
         zoomSlider.tag = 103
         zoomSlider.addTarget(self, action: #selector(controlEventHandler(sender:)), for: .valueChanged)
         view.addSubview(zoomSlider)
+        
+        // movie record
+        ptY = ptY + 100
+        let recordBtn = UIButton(frame: CGRect(x: 12, y: ptY, width: 100, height: 80))
+        recordBtn.layer.borderWidth = 1.0
+        recordBtn.setTitle("start", for: .normal)
+        recordBtn.addTarget(self, action: #selector(controlEventHandler(sender:)), for: .touchUpInside)
+        recordBtn.tag = 104
+        view.addSubview(recordBtn)
+        
     }
     
     @objc
@@ -102,7 +113,6 @@ class ViewController: UIViewController {
             if !self.camera.supportsLockWhiteBalanceToCustomValue() {
                 return
             }
-            
             let tempSlider = view.viewWithTag(101) as! UISlider
             let tintSlider = view.viewWithTag(102) as! UISlider
             let newVal = AVCaptureDevice.WhiteBalanceTemperatureAndTintValues(temperature: tempSlider.value, tint: tintSlider.value)
@@ -114,15 +124,29 @@ class ViewController: UIViewController {
             }
         } else if sender.tag == 103 {
             self.camera.setZoomFactor(CGFloat((sender as! UISlider).value))
+        } else if sender.tag == 104 {
+            if (sender as! UIButton).titleLabel?.text == "start" {
+                self.startRecord()
+                (sender as! UIButton).setTitle("end", for: .normal)
+            } else {
+                (sender as! UIButton).setTitle("start", for: .normal)
+                self.finishRecord {
+                    print("Record Finished")
+                }
+            }
         }
     }
-    
 }
 
 extension ViewController: SXCameraControllerDataDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         renderView.draw(pixelBuffer)
+        if (view.viewWithTag(104) as! UIButton).titleLabel?.text == "end" {
+            let recordBuffer = self.createPixelBuffer()
+            renderView.render(to: recordBuffer)
+            self.movieRecorder.append(recordBuffer)
+        }
         renderView.renderToScreen()
     }
     
@@ -135,6 +159,17 @@ extension ViewController: SXCameraControllerDataDelegate {
         CVPixelBufferCreate(kCFAllocatorDefault, 720, 1280, kCVPixelFormatType_32BGRA, [kCVPixelBufferMetalCompatibilityKey: true] as CFDictionary
             , &buffer)
         return buffer!
+    }
+}
+
+extension ViewController {
+    
+    func startRecord() {
+        self.movieRecorder.startWriting()
+    }
+    
+    func finishRecord(handler:@escaping ()->()) {
+        self.movieRecorder.finishWriting(handler)
     }
     
 }
