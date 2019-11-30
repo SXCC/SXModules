@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		890EC47F2391072500982CAB /* SXCameraUtil.h in Headers */ = {isa = PBXBuildFile; fileRef = 890EC47D2391072500982CAB /* SXCameraUtil.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		890EC4802391072500982CAB /* SXCameraUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 890EC47E2391072500982CAB /* SXCameraUtil.m */; };
 		89391FBF2388D3760074B3EC /* SXModules.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FBD2388D3760074B3EC /* SXModules.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		89391FF02388D5C10074B3EC /* SXVideoRenderView.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FEE2388D5C10074B3EC /* SXVideoRenderView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89391FEF2388D5C10074B3EC /* SXVideoRenderView.mm */; };
@@ -21,6 +23,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		890EC47D2391072500982CAB /* SXCameraUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SXCameraUtil.h; sourceTree = "<group>"; };
+		890EC47E2391072500982CAB /* SXCameraUtil.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SXCameraUtil.m; sourceTree = "<group>"; };
 		89391FBA2388D3760074B3EC /* SXModules.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SXModules.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		89391FBD2388D3760074B3EC /* SXModules.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SXModules.h; sourceTree = "<group>"; };
 		89391FBE2388D3760074B3EC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -91,6 +95,8 @@
 			children = (
 				89391FFC2388D6B50074B3EC /* SXCameraController.h */,
 				89391FFB2388D6B50074B3EC /* SXCameraController.m */,
+				890EC47D2391072500982CAB /* SXCameraUtil.h */,
+				890EC47E2391072500982CAB /* SXCameraUtil.m */,
 			);
 			path = SXCamera;
 			sourceTree = "<group>";
@@ -124,6 +130,7 @@
 			files = (
 				89391FF32388D62B0074B3EC /* ShaderTypes.h in Headers */,
 				89391FFE2388D6B50074B3EC /* SXCameraController.h in Headers */,
+				890EC47F2391072500982CAB /* SXCameraUtil.h in Headers */,
 				89391FF02388D5C10074B3EC /* SXVideoRenderView.h in Headers */,
 				89391FBF2388D3760074B3EC /* SXModules.h in Headers */,
 			);
@@ -201,6 +208,7 @@
 				89391FF92388D6840074B3EC /* DrawSampleBuffer.metal in Sources */,
 				89391FFD2388D6B50074B3EC /* SXCameraController.m in Sources */,
 				89391FFA2388D6840074B3EC /* DrawTargetTexture.metal in Sources */,
+				890EC4802391072500982CAB /* SXCameraUtil.m in Sources */,
 				89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */,
 				893920032388EFB30074B3EC /* BlendMaskFilter.metal in Sources */,
 			);
@@ -334,6 +342,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/**";
 				INFOPLIST_FILE = SXModules/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
@@ -359,6 +368,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/**";
 				INFOPLIST_FILE = SXModules/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;

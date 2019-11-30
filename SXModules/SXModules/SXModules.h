@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "SXCameraController.h"
+#import "SXCameraUtil.h"
 #import "SXVideoRenderView.h"
 
 //! Project version number for SXModules.

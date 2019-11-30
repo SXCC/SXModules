@@ -8,15 +8,16 @@
 
 #import "SXCameraController.h"
 
-@interface SXCameraController() <AVCaptureVideoDataOutputSampleBufferDelegate>
+@interface SXCameraController() <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureDepthDataOutputDelegate>
 @property (strong, nonatomic) dispatch_queue_t dataQueue;
 @property (strong, nonatomic) AVCaptureSession* session;
 @property (strong, nonatomic) AVCaptureDevice* currentDevice;
 @property (strong, nonatomic) AVCaptureDeviceInput* deviceInput;
-@property (strong, nonatomic) AVCaptureVideoDataOutput* dataOutput;
+@property (strong, nonatomic) AVCaptureVideoDataOutput* videoDataOutput;
+@property (strong, nonatomic) AVCaptureDepthDataOutput* depthDataOutput;
 @property (assign, nonatomic) AVCaptureVideoOrientation videoOrientation;
 @property (assign, nonatomic) BOOL mirror;
-@property (strong, nonatomic) NSMutableArray* dataDelegates;
+@property (strong, nonatomic) NSMutableArray<id<SXCameraControllerDataDelegate>>* dataDelegates;
 @end
 
 @implementation SXCameraController
@@ -37,8 +38,13 @@
 }
 
 - (void)configCommonParams {
-    if ([[self.dataOutput connections] count] > 0) {
-        AVCaptureConnection* conn = [self.dataOutput.connections firstObject];
+    if ([[self.videoDataOutput connections] count] > 0) {
+        AVCaptureConnection* conn = [self.videoDataOutput.connections firstObject];
+        conn.videoOrientation = self.videoOrientation;
+        conn.videoMirrored = self.mirror;
+    }
+    if ([[self.depthDataOutput connections] count] > 0) {
+        AVCaptureConnection* conn = [self.depthDataOutput.connections firstObject];
         conn.videoOrientation = self.videoOrientation;
         conn.videoMirrored = self.mirror;
     }
@@ -46,13 +52,29 @@
 
 - (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
     @synchronized (self.dataDelegates) {
-        for (id<AVCaptureAudioDataOutputSampleBufferDelegate> delegate in self.dataDelegates) {
+        for (id<SXCameraControllerDataDelegate> delegate in self.dataDelegates) {
             [delegate captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection];
         }
     }
 }
 
+- (void)depthDataOutput:(AVCaptureDepthDataOutput *)output didOutputDepthData:(AVDepthData *)depthData timestamp:(CMTime)timestamp connection:(AVCaptureConnection *)connection {
+    @synchronized (self.dataDelegates) {
+        for (id<SXCameraControllerDataDelegate> delegate in self.dataDelegates) {
+            [delegate depthDataOutput:output didOutputDepthData:depthData timestamp:timestamp connection:connection];
+        }
+    }
+}
+
+- (dispatch_queue_t)dataQueue {
+    if (_dataQueue == nil) {
+        _dataQueue = dispatch_get_main_queue();
+    }
+    return _dataQueue;
+}
+
 #pragma mark - interface
+#pragma mark - input device
 - (BOOL)setInputDevice:(AVCaptureDevice *)device {
     if (self.currentDevice == device) {
         return true;
@@ -63,7 +85,6 @@
         NSLog(@"[SXCameraController setInputDevice:][Error]:%@", [error localizedDescription]);
         return false;
     }
-    
     [self.session beginConfiguration];
     [self.session removeInput:self.deviceInput];
     if ([self.session canAddInput:newDeviceInput]) {
@@ -84,7 +105,7 @@
 
 - (BOOL)switchToDefaultDeviceOfPosition:(AVCaptureDevicePosition)position {
     [self.session beginConfiguration];
-    AVCaptureDevice* newDevice = [[AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position].devices firstObject];
+    AVCaptureDevice* newDevice = [[AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position].devices firstObject];
     AVCaptureDeviceInput* newDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:newDevice error:nil];
     [self.session removeInput:self.deviceInput];
     if ([self.session canAddInput:newDeviceInput]) {
@@ -102,25 +123,35 @@
     }
 }
 
-- (void)setDataOutputWithSettings:(NSDictionary *)videoSetting {
-    [self.session beginConfiguration];
-    if (self.dataOutput) {
-        [self.session removeOutput:self.dataOutput];
-        self.dataOutput = nil;
-    }
-    AVCaptureVideoDataOutput* videoDataOutput = [[AVCaptureVideoDataOutput alloc] init];
-    self.dataQueue = dispatch_get_main_queue(); //dispatch_queue_create("com.sxc.sxccameradataqueue", DISPATCH_QUEUE_SERIAL);
-    [videoDataOutput setSampleBufferDelegate:self queue:self.dataQueue];
-    videoDataOutput.videoSettings = videoSetting;
-    if ([self.session canAddOutput:videoDataOutput]) {
-        [self.session addOutput:videoDataOutput];
-        self.dataOutput = videoDataOutput;
-    }
-    [self configCommonParams];
-    [self.session commitConfiguration];
+#pragma mark - Device format & depth format
+- (AVCaptureDeviceFormat *)activeDeviceFormat {
+    return self.currentDevice.activeFormat;
 }
 
-- (void)addDataOutputDelegate:(id<AVCaptureVideoDataOutputSampleBufferDelegate>)delegate {
+- (AVCaptureDeviceFormat *)activeDepthDataFormat {
+    return self.currentDevice.activeDepthDataFormat;
+}
+
+- (NSArray<AVCaptureDeviceFormat *> *)supportedDeviceFormatsForCurrentDevice {
+    return self.currentDevice.formats;
+}
+
+- (void)setActiveDeviceFormat:(AVCaptureDeviceFormat *)deviceFormat {
+    if ([self.currentDevice lockForConfiguration:nil]) {
+        self.currentDevice.activeFormat = deviceFormat;
+        [self.currentDevice unlockForConfiguration];
+    }
+}
+
+- (void)setActiveDepthDataFormat:(AVCaptureDeviceFormat *)depthDataOutput {
+    if ([self.currentDevice lockForConfiguration:nil]) {
+        self.currentDevice.activeDepthDataFormat = depthDataOutput;
+        [self.currentDevice unlockForConfiguration];
+    }
+}
+
+#pragma mark - camera output
+- (void)addDataOutputDelegate:(id<SXCameraControllerDataDelegate>)delegate {
     @synchronized (self.dataDelegates) {
         if (![self.dataDelegates containsObject:delegate]) {
             [self.dataDelegates addObject:delegate];
@@ -128,7 +159,7 @@
     }
 }
 
-- (void)removeDataOutputDelegate:(id<AVCaptureVideoDataOutputSampleBufferDelegate>)delegate {
+- (void)removeDataOutputDelegate:(id<SXCameraControllerDataDelegate>)delegate {
     @synchronized (self.dataDelegates) {
         if ([self.dataDelegates containsObject:delegate]) {
             [self.dataDelegates removeObject:delegate];
@@ -136,28 +167,43 @@
     }
 }
 
-- (void)setVideoMirror:(BOOL)mirror {
-    if (self.mirror != mirror) {
-        self.mirror = mirror;
-        [self configCommonParams];
-    }
-}
-
-- (void)setVideoDataOrientation:(AVCaptureVideoOrientation)orientation {
-    if (self.videoOrientation != orientation) {
-        self.videoOrientation = orientation;
-        [self configCommonParams];
-    }
-}
-
-
-- (void)setSessionPreset:(AVCaptureSessionPreset)preset {
+#pragma mark - video data output
+- (void)setDataOutputWithSettings:(NSDictionary *)videoSetting {
     [self.session beginConfiguration];
-    self.session.sessionPreset = preset;
+    if (self.videoDataOutput) {
+        [self.session removeOutput:self.videoDataOutput];
+        self.videoDataOutput = nil;
+    }
+    AVCaptureVideoDataOutput* videoDataOutput = [[AVCaptureVideoDataOutput alloc] init];
+    [videoDataOutput setSampleBufferDelegate:self queue:self.dataQueue];
+    videoDataOutput.videoSettings = videoSetting;
+    if ([self.session canAddOutput:videoDataOutput]) {
+        [self.session addOutput:videoDataOutput];
+        self.videoDataOutput = videoDataOutput;
+    }
     [self configCommonParams];
     [self.session commitConfiguration];
 }
 
+#pragma mark - depth data output
+- (void)setDepthDataOutput {
+    [self.session beginConfiguration];
+    if (self.depthDataOutput) {
+        [self.session removeOutput:self.depthDataOutput];
+        self.depthDataOutput = nil;
+    }
+    AVCaptureDepthDataOutput* depthDataOutput = [[AVCaptureDepthDataOutput alloc] init];
+    [depthDataOutput setDelegate:self callbackQueue:self.dataQueue];
+    if ([self.session canAddOutput:depthDataOutput]) {
+        [self.session addOutput:depthDataOutput];
+        self.depthDataOutput = depthDataOutput;
+    }
+    [self configCommonParams];
+    [self.session commitConfiguration];
+}
+
+
+#pragma mark - white balance
 - (BOOL)supportsLockWhiteBalanceToCustomValue {
     return [self.currentDevice isLockingWhiteBalanceWithCustomDeviceGainsSupported];
 }
@@ -193,6 +239,50 @@
     }
 }
 
+#pragma mark - zoom factor
+- (CGFloat)currentZoomFactor {
+    return self.currentDevice.videoZoomFactor;
+}
+
+- (CGFloat)maxiumZoomFactor {
+    return [self.currentDevice maxAvailableVideoZoomFactor];
+}
+
+- (CGFloat)miniumZoomFactor {
+    return [self.currentDevice minAvailableVideoZoomFactor];
+}
+
+- (void)setZoomFactor:(CGFloat)newZoomFactor {
+    if ([self.currentDevice lockForConfiguration:nil]) {
+        [self.currentDevice setVideoZoomFactor:newZoomFactor];
+        [self.currentDevice unlockForConfiguration];
+    }
+}
+
+#pragma mark - other settings
+- (void)setVideoMirror:(BOOL)mirror {
+    if (self.mirror != mirror) {
+        self.mirror = mirror;
+        [self configCommonParams];
+    }
+}
+
+- (void)setVideoDataOrientation:(AVCaptureVideoOrientation)orientation {
+    if (self.videoOrientation != orientation) {
+        self.videoOrientation = orientation;
+        [self configCommonParams];
+    }
+}
+
+
+- (void)setSessionPreset:(AVCaptureSessionPreset)preset {
+    [self.session beginConfiguration];
+    self.session.sessionPreset = preset;
+    [self configCommonParams];
+    [self.session commitConfiguration];
+}
+
+#pragma mark - camera control
 - (void)startCapture {
     [self.session startRunning];
 }
