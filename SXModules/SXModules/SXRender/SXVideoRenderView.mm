@@ -23,7 +23,6 @@
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawSampleBufferPipelineState;
 // 叠加渲染归一化特征点到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawNormalizedPointsPipelineState;
-@property (strong, nonatomic) id<MTLBuffer> drawPointBuffer;
 // 叠加渲染mask到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> blendMaskPipelineState;
 
@@ -124,16 +123,16 @@
             index++;
         }
     }
-    memcpy(self.drawPointBuffer.contents, buffer, sizeof(Vertex) * sum);
+    id<MTLBuffer> drawPointBuffer = [self.device newBufferWithLength:sizeof(Vertex) * 600 options:MTLResourceStorageModeShared];
+    memcpy(drawPointBuffer.contents, buffer, sizeof(Vertex) * sum);
     free(buffer);
-    
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
     self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留intermediateTexture已有内容
     id<MTLRenderCommandEncoder> renderCmdEncoder =
         [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
     [renderCmdEncoder setRenderPipelineState:self.drawNormalizedPointsPipelineState];
     [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
-    [renderCmdEncoder setVertexBuffer:self.drawPointBuffer offset:0 atIndex:0];
+    [renderCmdEncoder setVertexBuffer:drawPointBuffer offset:0 atIndex:0];
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sum];
     [renderCmdEncoder endEncoding];
     [commandBuffer commit];
@@ -292,7 +291,6 @@
 
 - (void)setupDrawPointPipeline {
     // hard code: max 600点
-    self.drawPointBuffer = [self.device newBufferWithLength:sizeof(Vertex) * 600 options:MTLResourceStorageModeShared];
     id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"vertexDrawerVertexShader"];
     id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"vertexDrawerFragmentShader"];
 
