@@ -9,6 +9,28 @@
 #import "SXVideoRenderView.h"
 #import "ShaderTypes.h"
 
+@implementation SXRenderPointAttr
+
+- (id)init {
+    self = [super init];
+    if (self) {
+        _pointSize = 4;
+        _pointColor = [UIColor redColor];
+    }
+    return self;
+}
+
+- (id)initWithPointSize:(float)ptSize PointColor:(UIColor *)color {
+    self = [super init];
+    if (self) {
+        _pointSize = ptSize;
+        _pointColor = color;
+    }
+    return self;
+}
+@end
+
+
 @interface SXVideoRenderView ()
 @property (assign, nonatomic) BOOL initialized;
 @property (strong, nonatomic) id<MTLCommandQueue> commandQueue;
@@ -107,23 +129,22 @@
 }
 
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints {
+    [self drawNormalizedPoints:normalizedPoints withAttr:[[SXRenderPointAttr alloc] init]] ;
+}
+
+- (void)drawNormalizedPoints:(NSArray *)normalizedPoints withAttr:(SXRenderPointAttr *)attr {
     if ([normalizedPoints count] == 0) {
         return;
     }
-    int sum = 0;
-    for (NSArray* arr in normalizedPoints) {
-        sum += [arr count];
-    }
+    int sum = (int)[normalizedPoints count];
     Vertex *buffer = (Vertex *)malloc(sizeof(Vertex) * sum);
     int index = 0;
-    for (NSArray* arr in normalizedPoints) {
-        for (NSValue* item in arr) {
-            CGPoint pt = [item CGPointValue];
-            buffer[index] = {{ float((pt.x - 0.5) * 2), float((0.5 - pt.y) * 2), 0, 1}, {0, 0}};
-            index++;
-        }
+    for (NSValue* item in normalizedPoints) {
+        CGPoint pt = [item CGPointValue];
+        buffer[index] = {{ float((pt.x - 0.5) * 2), float((0.5 - pt.y) * 2), 0, 1}, {0, 0}};
+        index++;
     }
-    id<MTLBuffer> drawPointBuffer = [self.device newBufferWithLength:sizeof(Vertex) * 600 options:MTLResourceStorageModeShared];
+    id<MTLBuffer> drawPointBuffer = [self.device newBufferWithLength:sizeof(Vertex) * sum options:MTLResourceStorageModeShared];
     memcpy(drawPointBuffer.contents, buffer, sizeof(Vertex) * sum);
     free(buffer);
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
@@ -133,6 +154,12 @@
     [renderCmdEncoder setRenderPipelineState:self.drawNormalizedPointsPipelineState];
     [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
     [renderCmdEncoder setVertexBuffer:drawPointBuffer offset:0 atIndex:0];
+    float ptSize = attr.pointSize;
+    [renderCmdEncoder setVertexBytes:&ptSize length:sizeof(float) atIndex:1];
+    CGFloat r, g, b, a;
+    [attr.pointColor getRed:&r green:&g blue:&b alpha:&a];
+    vector_float4 ptColor = {float(r), float(g), float(b), float(a)};
+    [renderCmdEncoder setFragmentBytes:&ptColor length:sizeof(ptColor) atIndex:0];
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:sum];
     [renderCmdEncoder endEncoding];
     [commandBuffer commit];

@@ -12,6 +12,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface SXRenderPointAttr : NSObject
+@property (assign, nonatomic) float pointSize;
+@property (strong, nonatomic) UIColor* pointColor;
+- (id)init;
+- (id)initWithPointSize:(float)ptSize PointColor:(UIColor *)color;
+@end
+
+
 @interface SXVideoRenderView: MTKView
 - (id)initWithFrame:(CGRect)frame
              Device:(id<MTLDevice>)device
@@ -22,6 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)drawPixelBuffer:(CVPixelBufferRef)pixelBuffer CleanBuffer:(BOOL)clean;
 - (void)drawSampleBuffer:(CMSampleBufferRef)sampleBuffer CleanBuffer:(BOOL)clean;
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints;
+- (void)drawNormalizedPoints:(NSArray *)normalizedPoints withAttr:(SXRenderPointAttr *)attr;
 - (void)blendMask:(unsigned char*)maskBytes Width:(int)width Height:(int)height Channels:(int)channels BytesPerRow:(int)rowBytes;
 // draw call configs
 - (void)setViewPort:(MTLViewport)newViewPort;
