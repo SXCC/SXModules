@@ -11,6 +11,7 @@
 #import "SXCameraUtil.h"
 #import "SXVideoRenderView.h"
 #import "SXMovieRecorder.h"
+#import "SXMovieReader.h"
 
 //! Project version number for SXModules.
 FOUNDATION_EXPORT double SXModulesVersionNumber;

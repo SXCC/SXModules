@@ -22,12 +22,12 @@ class ViewController: UIViewController {
         view.addSubview(renderView)
         camera = SXCameraController()
         camera.setDataOutputWithSettings([kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA])
-        
-        if let targetDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera], mediaType: .video, position: .back).devices.first {
-            camera.setInputDevice(targetDevice)
-        } else {
-            camera.switch(toDefaultDeviceOf: .back)
-        }
+        camera.switch(toDefaultDeviceOf: .front)
+//        if let targetDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera], mediaType: .video, position: .back).devices.first {
+//            camera.setInputDevice(targetDevice)
+//        } else {
+//            camera.switch(toDefaultDeviceOf: .back)
+//        }
 
         camera.setVideoDataOrientation(.portrait)
         camera.setVideoMirror(false)
@@ -141,11 +141,11 @@ class ViewController: UIViewController {
 extension ViewController: SXCameraControllerDataDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
-        renderView.setViewPort(MTLViewport(originX: 0, originY: 0, width: 360, height: 640, znear: 0, zfar: 1))
+//        renderView.setViewPort(MTLViewport(originX: 0, originY: 0, width: 360, height: 640, znear: 0, zfar: 1))
         renderView.draw(pixelBuffer, cleanBuffer: true)
-        renderView.setViewPort(MTLViewport(originX: 360, originY: 640, width: 360, height: 640, znear: 0, zfar: 1))
-        renderView.draw(pixelBuffer, cleanBuffer: false)
-        renderView.drawNormalizedPoints([CGPoint(x: 0.5, y: 0.5)], with: SXRenderPointAttr(pointSize: 20, pointColor: .blue))
+//        renderView.setViewPort(MTLViewport(originX: 360, originY: 640, width: 360, height: 640, znear: 0, zfar: 1))
+//        renderView.draw(pixelBuffer, cleanBuffer: false)
+//        renderView.drawNormalizedPoints([CGPoint(x: 0.5, y: 0.5)], with: SXRenderPointAttr(pointSize: 20, pointColor: .blue))
         
         if (view.viewWithTag(104) as! UIButton).titleLabel?.text == "end" {
             let recordBuffer = self.createPixelBuffer()
