@@ -279,12 +279,21 @@
                                               pixelBuffer, nil,
                                               MTLPixelFormatBGRA8Unorm,
                                               width, height, 0, &textureRef);
-    if (textureRef == nil) {
-        abort();
+    if (textureRef != nil) {
+        id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
+        CFRelease(textureRef);
+        return texture;
+    } else {
+        MTLTextureDescriptor* textureDesc = [[MTLTextureDescriptor alloc] init];
+        textureDesc.width = width;
+        textureDesc.height = height;
+        textureDesc.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        id<MTLTexture> texture = [self.device newTextureWithDescriptor:textureDesc];
+        CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+        unsigned char* addr = (unsigned char*)CVPixelBufferGetBaseAddress(pixelBuffer);
+        [texture replaceRegion:{{0, 0, 0},  {static_cast<NSUInteger>(width), static_cast<NSUInteger>(height), 1}} mipmapLevel:0 withBytes:addr bytesPerRow:CVPixelBufferGetBytesPerRow(pixelBuffer)];
+        return texture;
     }
-    id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
-    CFRelease(textureRef);
-    return texture;
 }
 
 - (void)setupCommonBuffers {
