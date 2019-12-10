@@ -18,7 +18,7 @@ typedef struct {
 
 vertex QuadVertexOut
 drawQuadVertexShader(uint vertexID [[vertex_id]],
-                             constant Vertex* vertices [[buffer(0)]]) {
+                     constant Vertex* vertices [[buffer(0)]]) {
     
     QuadVertexOut out;
     out.position = vector_float4(0, 0, 0, 1);
@@ -29,11 +29,30 @@ drawQuadVertexShader(uint vertexID [[vertex_id]],
 
 fragment float4
 drawQuadFragmentShader(QuadVertexOut in [[stage_in]],
-                               texture2d<half> texture [[texture(0)]]) {
+                       constant int* texture_type[[buffer(0)]],
+                       texture2d<half> texture [[texture(0)]],
+                       texture2d<half> texture1 [[texture(1)]]) {
 
     constexpr sampler textureSampler (mag_filter::linear,
                                       min_filter::linear);
-    const half4 colorPixel = texture.sample(textureSampler, in.textureCoordinate);
-    return float4(colorPixel.r, colorPixel.g, colorPixel.b, 1);
-    
+    if(*texture_type == 0) { // bgr input
+        const half4 colorPixel = texture.sample(textureSampler, in.textureCoordinate);
+        return float4(colorPixel.r, colorPixel.g, colorPixel.b, 1);
+    } else { // yuv intput
+        const half4 ySample = texture.sample(textureSampler, in.textureCoordinate);
+        const half4 uvSample = texture1.sample(textureSampler, in.textureCoordinate);
+        
+        float3 yuv;
+        yuv.x = ySample.r;
+        yuv.yz = float2(uvSample.rg - half2(0.5));
+        
+        float3x3 matrix = {
+            {1.164, 1.164, 1.164},
+            {0, -0.231, 2.112},
+            {1.793, -0.533, 0}
+        };
+        float3 rgb = matrix * yuv;
+        return float4(rgb, 1.0);
+    }
+    return float4(0, 0, 0, 1);
 }

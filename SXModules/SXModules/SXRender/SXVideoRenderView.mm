@@ -121,8 +121,21 @@
     [renderCmdEncoder setRenderPipelineState:self.drawSampleBufferPipelineState];
     [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
     [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
-    id<MTLTexture> texture = [self textureFromPixelBuffer:pixelBuffer];
-    [renderCmdEncoder setFragmentTexture:texture atIndex:0];
+
+    if(CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_32BGRA) {
+        id<MTLTexture> texture = [self textureFromPixelBuffer:pixelBuffer];
+        [renderCmdEncoder setFragmentTexture:texture atIndex:0];
+        [renderCmdEncoder setFragmentTexture:texture atIndex:1];
+        int textureType = 0;
+        [renderCmdEncoder setFragmentBytes:&textureType length:sizeof(int) atIndex:0];
+    } else {
+        NSArray* textures = [self texturesFromYUVPixelBuffer:pixelBuffer];
+        [renderCmdEncoder setFragmentTexture:textures[0] atIndex:0];
+        [renderCmdEncoder setFragmentTexture:textures[1] atIndex:1];
+        int textureType = 1;
+        [renderCmdEncoder setFragmentBytes:&textureType length:sizeof(int) atIndex:0];
+    }
+    
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
     [renderCmdEncoder endEncoding];
     [commandBuffer commit];
@@ -239,6 +252,9 @@
         [renderCmdEncoder setRenderPipelineState:self.screenRenderPipelineState];
         [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
         [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:0];
+        [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:1];
+        int textureType = 0;
+        [renderCmdEncoder setFragmentBytes:&textureType length:sizeof(int) atIndex:0];
         [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
         [renderCmdEncoder endEncoding];
         [commandBuffer presentDrawable:self.currentDrawable];
@@ -295,6 +311,57 @@
         return texture;
     }
 }
+
+- (NSArray<id<MTLTexture>> *)texturesFromYUVPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+    int yWidth = (int)CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
+    int yHeight = (int)CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
+    
+    int uvWidth = (int)CVPixelBufferGetWidthOfPlane(pixelBuffer, 1);
+    int uvHeight = (int)CVPixelBufferGetHeightOfPlane(pixelBuffer, 1);
+    
+    CVMetalTextureRef yTextureRef, uvTextureRef;
+    
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+                                              self.textureCache,
+                                              pixelBuffer, nil,
+                                              MTLPixelFormatR8Unorm,
+                                              yWidth, yHeight, 0, &yTextureRef);
+    CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+                                              self.textureCache,
+                                              pixelBuffer, nil,
+                                              MTLPixelFormatRG8Unorm,
+                                              uvWidth, uvHeight, 1, &uvTextureRef);
+    if (yTextureRef != nil && uvTextureRef != nil) {
+        id<MTLTexture> yTexture = CVMetalTextureGetTexture(yTextureRef);
+        id<MTLTexture> uvTexture = CVMetalTextureGetTexture(uvTextureRef);
+        CFRelease(yTextureRef);
+        CFRelease(uvTextureRef);
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+        return @[yTexture, uvTexture];
+    }
+    
+    MTLTextureDescriptor* yTextureDesc = [[MTLTextureDescriptor alloc] init];
+    yTextureDesc.width = yWidth;
+    yTextureDesc.height = yHeight;
+    yTextureDesc.pixelFormat = MTLPixelFormatR8Unorm;
+    id<MTLTexture> yTexture = [self.device newTextureWithDescriptor:yTextureDesc];
+    unsigned char* addr = (unsigned char*)CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+    [yTexture replaceRegion:{{0, 0, 0},  {static_cast<NSUInteger>(yWidth), static_cast<NSUInteger>(yHeight), 1}} mipmapLevel:0 withBytes:addr bytesPerRow:CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)];
+    
+    MTLTextureDescriptor* uvTextureDesc = [[MTLTextureDescriptor alloc] init];
+    uvTextureDesc.width = uvWidth;
+    uvTextureDesc.height = uvHeight;
+    uvTextureDesc.pixelFormat = MTLPixelFormatRG8Unorm;
+    id<MTLTexture> uvTexture = [self.device newTextureWithDescriptor:uvTextureDesc];
+    addr = (unsigned char*)CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
+    [uvTexture replaceRegion:{{0, 0, 0},  {static_cast<NSUInteger>(uvHeight), static_cast<NSUInteger>(uvWidth), 1}} mipmapLevel:0 withBytes:addr bytesPerRow:CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)];
+    
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+    
+    return @[yTexture, uvTexture];
+}
+
 
 - (void)setupCommonBuffers {
     Vertex vll = Vertex{ {-1, -1, 1, 1}, {0, 1} };
