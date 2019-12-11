@@ -274,6 +274,9 @@
     [renderCmdEncoder setRenderPipelineState:self.pixelBufferRenderPipelineState];
     [renderCmdEncoder setVertexBuffer:self.drawQuadVertexBuffer offset:0 atIndex:0];
     [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:0];
+    [renderCmdEncoder setFragmentTexture:self.intermediateTexture atIndex:1];
+    int textureType = 0;
+    [renderCmdEncoder setFragmentBytes:&textureType length:sizeof(int) atIndex:0];
     [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
     [renderCmdEncoder endEncoding];
     [commandBuffer commit];
