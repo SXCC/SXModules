@@ -67,6 +67,10 @@
     [self.assetWriter startSessionAtSourceTime:self.pTime];
 }
 
+- (BOOL)canAppendPixelBuffer {
+    return self.videoInput.isReadyForMoreMediaData;
+}
+
 - (void)appendPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     if (!self.videoInput.isReadyForMoreMediaData) {
         [NSThread sleepForTimeInterval:0.1]; // wait video writer for 0.1s

@@ -12,6 +12,7 @@
 
 @interface SXMovieRecorder : NSObject
 - (id)initWithPath:(NSString *)path FileType:(AVFileType)fileType VideoSize:(CGSize)videoSize FrameRate:(NSInteger)frameRate BitRate:(NSInteger)bitRate;
+- (BOOL)canAppendPixelBuffer;
 - (void)startWriting;
 - (void)appendPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 - (void)finishWriting:(void(^)(void))handler;
