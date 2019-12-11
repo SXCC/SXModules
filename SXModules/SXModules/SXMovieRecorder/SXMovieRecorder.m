@@ -81,9 +81,13 @@
         self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
         return;
     }
-    
-    [self.pixelBufferAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:self.pTime];
-    self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
+    @try {
+        [self.pixelBufferAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:self.pTime];
+        self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
+    }
+    @catch (NSException *exception) {
+        NSLog(@"[SXMovieRecorder][Error]: got exception %@", [exception description]);
+    }
 }
 
 - (void)finishWriting:(void(^)(void))handler {
