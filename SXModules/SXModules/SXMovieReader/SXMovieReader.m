@@ -36,7 +36,7 @@
     NSError* error;
     self.assetReader = [AVAssetReader assetReaderWithAsset:self.movieAsset error:&error];
     if (error) {
-        NSLog(@"[BETMovieReader Error]: %@", [error localizedDescription]);
+        NSLog(@"[SXMovieReder Error]: %@", [error localizedDescription]);
         return false;
     }
     self.movieAssetVideoTrack = [[self.movieAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];
@@ -62,7 +62,7 @@
         self.currentFrameIndex++;
         *status = AVAssetReaderStatusReading;
     } else {
-        NSLog(@"[BET] Read MOV Failed or Completed");
+        NSLog(@"[SXMovieReader] Read MOV Failed or Completed");
         *status = self.assetReader.status;
         return nil;
     }

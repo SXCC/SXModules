@@ -78,6 +78,7 @@
             }
         } else {
             NSBundle* frameworkBundle = [NSBundle bundleForClass:[self class]];
+
             NSError* error;
             _library = [self.device newDefaultLibraryWithBundle:frameworkBundle error:&error];
             if (error) {
