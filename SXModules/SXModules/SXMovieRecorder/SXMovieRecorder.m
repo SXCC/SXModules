@@ -71,7 +71,7 @@
     return self.videoInput.isReadyForMoreMediaData;
 }
 
-- (void)appendPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+- (BOOL)appendPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     if (!self.videoInput.isReadyForMoreMediaData) {
         [NSThread sleepForTimeInterval:0.1]; // wait video writer for 0.1s
     }
@@ -79,14 +79,16 @@
     if (!self.videoInput.isReadyForMoreMediaData) {
         NSLog(@"Drop One Frame");
         self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
-        return;
+        return false;
     }
     @try {
         [self.pixelBufferAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:self.pTime];
         self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
+        return true;
     }
     @catch (NSException *exception) {
         NSLog(@"[SXMovieRecorder][Error]: got exception %@", [exception description]);
+        return false;
     }
 }
 
