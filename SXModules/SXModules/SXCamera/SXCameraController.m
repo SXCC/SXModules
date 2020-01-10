@@ -8,6 +8,7 @@
 
 #import "SXCameraController.h"
 
+API_AVAILABLE(ios(11.0))
 @interface SXCameraController() <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureDepthDataOutputDelegate>
 @property (strong, nonatomic) dispatch_queue_t dataQueue;
 @property (strong, nonatomic) AVCaptureSession* session;
@@ -58,7 +59,7 @@
     }
 }
 
-- (void)depthDataOutput:(AVCaptureDepthDataOutput *)output didOutputDepthData:(AVDepthData *)depthData timestamp:(CMTime)timestamp connection:(AVCaptureConnection *)connection {
+- (void)depthDataOutput:(AVCaptureDepthDataOutput *)output didOutputDepthData:(AVDepthData *)depthData timestamp:(CMTime)timestamp connection:(AVCaptureConnection *)connection  API_AVAILABLE(ios(11.0)){
     @synchronized (self.dataDelegates) {
         for (id<SXCameraControllerDataDelegate> delegate in self.dataDelegates) {
             [delegate depthDataOutput:output didOutputDepthData:depthData timestamp:timestamp connection:connection];
@@ -129,7 +130,11 @@
 }
 
 - (AVCaptureDeviceFormat *)activeDepthDataFormat {
-    return self.currentDevice.activeDepthDataFormat;
+    if (@available(iOS 11.0, *)) {
+        return self.currentDevice.activeDepthDataFormat;
+    } else {
+        return nil;
+    }
 }
 
 - (NSArray<AVCaptureDeviceFormat *> *)supportedDeviceFormatsForCurrentDevice {
@@ -144,9 +149,13 @@
 }
 
 - (void)setActiveDepthDataFormat:(AVCaptureDeviceFormat *)depthDataOutput {
-    if ([self.currentDevice lockForConfiguration:nil]) {
-        self.currentDevice.activeDepthDataFormat = depthDataOutput;
-        [self.currentDevice unlockForConfiguration];
+    if (@available(iOS 11.0, *)) {
+        if ([self.currentDevice lockForConfiguration:nil]) {
+            self.currentDevice.activeDepthDataFormat = depthDataOutput;
+            [self.currentDevice unlockForConfiguration];
+        }
+    } else {
+        // nop
     }
 }
 
@@ -187,19 +196,24 @@
 
 #pragma mark - depth data output
 - (void)setDepthDataOutput {
-    [self.session beginConfiguration];
-    if (self.depthDataOutput) {
-        [self.session removeOutput:self.depthDataOutput];
-        self.depthDataOutput = nil;
+    if (@available(iOS 11.0, *)) {
+        [self.session beginConfiguration];
+        if (self.depthDataOutput) {
+            [self.session removeOutput:self.depthDataOutput];
+            self.depthDataOutput = nil;
+        }
+        
+        AVCaptureDepthDataOutput* depthDataOutput = [[AVCaptureDepthDataOutput alloc] init];
+        [depthDataOutput setDelegate:self callbackQueue:self.dataQueue];
+        if ([self.session canAddOutput:depthDataOutput]) {
+            [self.session addOutput:depthDataOutput];
+            self.depthDataOutput = depthDataOutput;
+        }
+        [self configCommonParams];
+        [self.session commitConfiguration];
+    } else {
+        // nop
     }
-    AVCaptureDepthDataOutput* depthDataOutput = [[AVCaptureDepthDataOutput alloc] init];
-    [depthDataOutput setDelegate:self callbackQueue:self.dataQueue];
-    if ([self.session canAddOutput:depthDataOutput]) {
-        [self.session addOutput:depthDataOutput];
-        self.depthDataOutput = depthDataOutput;
-    }
-    [self configCommonParams];
-    [self.session commitConfiguration];
 }
 
 
@@ -245,11 +259,19 @@
 }
 
 - (CGFloat)maxiumZoomFactor {
-    return [self.currentDevice maxAvailableVideoZoomFactor];
+    if (@available(iOS 11.0, *)) {
+        return [self.currentDevice maxAvailableVideoZoomFactor];
+    } else {
+        return 0.0;
+    }
 }
 
 - (CGFloat)miniumZoomFactor {
-    return [self.currentDevice minAvailableVideoZoomFactor];
+    if (@available(iOS 11.0, *)) {
+        return [self.currentDevice minAvailableVideoZoomFactor];
+    } else {
+        return 0.0;
+    }
 }
 
 - (void)setZoomFactor:(CGFloat)newZoomFactor {

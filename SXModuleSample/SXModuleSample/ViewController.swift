@@ -16,6 +16,8 @@ class ViewController: UIViewController {
     var camera: SXCameraController!
     var movieRecorder: SXMovieRecorder!
     
+    var recordCount = 0
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         renderView = SXVideoRenderView(frame: view.frame, device: MTLCreateSystemDefaultDevice()!, libraryPath: nil, bufferSize: CGSize(width: 720, height: 1280))
@@ -23,12 +25,6 @@ class ViewController: UIViewController {
         camera = SXCameraController()
         camera.setDataOutputWithSettings([kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA])
         camera.switch(toDefaultDeviceOf: .front)
-//        if let targetDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera], mediaType: .video, position: .back).devices.first {
-//            camera.setInputDevice(targetDevice)
-//        } else {
-//            camera.switch(toDefaultDeviceOf: .back)
-//        }
-
         camera.setVideoDataOrientation(.portrait)
         camera.setVideoMirror(false)
         camera.addDataOutputDelegate(self)
@@ -39,11 +35,7 @@ class ViewController: UIViewController {
             let targetFormat = targetFormats.first!
             camera.setActiveDeviceFormat(targetFormat)
         }
-        
-        let filePath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/video.mov"
-        do { try FileManager.default.removeItem(atPath: filePath) } catch {} // remove file if already exists
-        movieRecorder = SXMovieRecorder(path: filePath, fileType: .mov, videoSize: CGSize(width: 720, height: 1280), frameRate: 30, bitRate: 3500000)
-            
+    
         setupControls()
     }
     
@@ -141,22 +133,15 @@ class ViewController: UIViewController {
 extension ViewController: SXCameraControllerDataDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
-//        renderView.setViewPort(MTLViewport(originX: 0, originY: 0, width: 360, height: 640, znear: 0, zfar: 1))
         renderView.draw(pixelBuffer, cleanBuffer: true)
-//        renderView.setViewPort(MTLViewport(originX: 360, originY: 640, width: 360, height: 640, znear: 0, zfar: 1))
-//        renderView.draw(pixelBuffer, cleanBuffer: false)
-//        renderView.drawNormalizedPoints([CGPoint(x: 0.5, y: 0.5)], with: SXRenderPointAttr(pointSize: 20, pointColor: .blue))
-        
         if (view.viewWithTag(104) as! UIButton).titleLabel?.text == "end" {
-            let recordBuffer = self.createPixelBuffer()
+            let recordBuffer = self.self.movieRecorder.generatePixelBuffer()!.takeRetainedValue()
             renderView.render(to: recordBuffer)
-            self.movieRecorder.append(recordBuffer)
+            if self.movieRecorder.append(recordBuffer) {
+                recordCount = recordCount + 1
+            }
         }
         renderView.renderToScreen()
-    }
-    
-    func depthDataOutput(_ output: AVCaptureDepthDataOutput, didOutput depthData: AVDepthData, timestamp: CMTime, connection: AVCaptureConnection) {
-        print("got depth data")
     }
     
     func createPixelBuffer() -> CVPixelBuffer {
@@ -170,11 +155,13 @@ extension ViewController: SXCameraControllerDataDelegate {
 extension ViewController {
     
     func startRecord() {
+        let filePath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/video.mov"
+        do { try FileManager.default.removeItem(atPath: filePath) } catch {} // remove file if already exists
+        movieRecorder = SXMovieRecorder(path: filePath, fileType: .mov, videoSize: CGSize(width: 720, height: 1280), frameRate: 30, bitRate: 3500000)
         self.movieRecorder.startWriting()
     }
     
     func finishRecord(handler:@escaping ()->()) {
         self.movieRecorder.finishWriting(handler)
     }
-    
 }

@@ -19,6 +19,8 @@
 @property (strong, nonatomic) AVAssetWriterInput* videoInput;
 @property (strong, nonatomic) AVAssetWriterInputPixelBufferAdaptor* pixelBufferAdaptor;
 @property (assign, nonatomic) CMTime pTime;
+
+@property (assign, nonatomic) NSInteger frameCount;
 @end
 
 @implementation SXMovieRecorder
@@ -36,6 +38,10 @@
     return self;
 }
 
+- (NSString *)getFilePath {
+    return self.filePath;
+}
+
 - (void)setupAssetWriter {
     NSError* error;
     self.assetWriter = [[AVAssetWriter alloc] initWithURL:[NSURL fileURLWithPath:self.filePath] fileType:self.fileType error:&error];
@@ -44,13 +50,22 @@
         abort();
     }
     
-    NSDictionary* videoSettings = @{
-        AVVideoCompressionPropertiesKey: @{AVVideoAverageBitRateKey: @(self.bitRate)}, 
-        AVVideoCodecKey: AVVideoCodecTypeH264,
-        AVVideoWidthKey: @(self.videoSize.width),
-        AVVideoHeightKey: @(self.videoSize.height)
-    };
-    self.videoInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
+    if (@available(iOS 11.0, *)) {
+        NSDictionary* videoSettings = @{
+            AVVideoCompressionPropertiesKey: @{AVVideoAverageBitRateKey: @(self.bitRate)},
+            AVVideoCodecKey: AVVideoCodecTypeH264,
+            AVVideoWidthKey: @(self.videoSize.width),
+            AVVideoHeightKey: @(self.videoSize.height)
+        };
+        self.videoInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
+    } else {
+        NSDictionary* videoSettings = @{
+            AVVideoCompressionPropertiesKey: @{AVVideoAverageBitRateKey: @(self.bitRate)},
+            AVVideoWidthKey: @(self.videoSize.width),
+            AVVideoHeightKey: @(self.videoSize.height)
+        };
+        self.videoInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
+    }
     [self.assetWriter addInput:self.videoInput];
     
     NSDictionary* pixelBufferAdaptorSettings = @{
@@ -65,6 +80,13 @@
     [self.assetWriter startWriting];
     self.pTime = CMTimeMake(0, 120); // 120 as a timescale
     [self.assetWriter startSessionAtSourceTime:self.pTime];
+    self.frameCount = 0;
+}
+
+- (CVPixelBufferRef)generatePixelBuffer {
+    CVPixelBufferRef buffer;
+    CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.pixelBufferAdaptor.pixelBufferPool, &buffer);
+    return buffer;
 }
 
 - (BOOL)canAppendPixelBuffer {
@@ -78,12 +100,13 @@
     
     if (!self.videoInput.isReadyForMoreMediaData) {
         NSLog(@"Drop One Frame");
-        self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
+//        self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
         return false;
     }
     @try {
         [self.pixelBufferAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:self.pTime];
         self.pTime = CMTimeAdd(self.pTime, CMTimeMake(120 / self.frameRate, 120));
+        self.frameCount++;
         return true;
     }
     @catch (NSException *exception) {
@@ -94,6 +117,7 @@
 
 - (void)finishWriting:(void(^)(void))handler {
     [self.assetWriter finishWritingWithCompletionHandler:^{
+        NSLog(@"[SXMovieRecorder]: finish writing, total count: %ld", (long)self.frameCount);
         if (handler) {
             handler();
         }
