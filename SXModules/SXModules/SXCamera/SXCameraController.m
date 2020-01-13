@@ -105,21 +105,25 @@ API_AVAILABLE(ios(11.0))
 }
 
 - (BOOL)switchToDefaultDeviceOfPosition:(AVCaptureDevicePosition)position {
-    [self.session beginConfiguration];
-    AVCaptureDevice* newDevice = [[AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position].devices firstObject];
-    AVCaptureDeviceInput* newDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:newDevice error:nil];
-    [self.session removeInput:self.deviceInput];
-    if ([self.session canAddInput:newDeviceInput]) {
-        self.currentDevice = newDevice;
-        self.deviceInput = newDeviceInput;
-        [self.session addInput:self.deviceInput];
-        [self configCommonParams];
-        [self.session commitConfiguration];
-        return true;
+    if (@available(iOS 10.0, *)) {
+        [self.session beginConfiguration];
+        AVCaptureDevice* newDevice = [[AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position].devices firstObject];
+        AVCaptureDeviceInput* newDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:newDevice error:nil];
+        [self.session removeInput:self.deviceInput];
+        if ([self.session canAddInput:newDeviceInput]) {
+            self.currentDevice = newDevice;
+            self.deviceInput = newDeviceInput;
+            [self.session addInput:self.deviceInput];
+            [self configCommonParams];
+            [self.session commitConfiguration];
+            return true;
+        } else {
+            [self.session addInput:self.deviceInput];
+            [self configCommonParams];
+            [self.session commitConfiguration];
+            return false;
+        }
     } else {
-        [self.session addInput:self.deviceInput];
-        [self configCommonParams];
-        [self.session commitConfiguration];
         return false;
     }
 }
@@ -219,7 +223,11 @@ API_AVAILABLE(ios(11.0))
 
 #pragma mark - white balance
 - (BOOL)supportsLockWhiteBalanceToCustomValue {
-    return [self.currentDevice isLockingWhiteBalanceWithCustomDeviceGainsSupported];
+    if (@available(iOS 10.0, *)) {
+        return [self.currentDevice isLockingWhiteBalanceWithCustomDeviceGainsSupported];
+    } else {
+        return false;
+    }
 }
 
 - (void)setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:(AVCaptureWhiteBalanceGains)gains completionHandler:(void (^)(CMTime syncTime))handler {

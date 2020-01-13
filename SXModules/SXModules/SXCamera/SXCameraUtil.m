@@ -28,8 +28,12 @@
         filterResutls = [candidates mutableCopy];
     } else {
         [curCandidates enumerateObjectsUsingBlock:^(AVCaptureDeviceFormat * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            if (obj.supportedDepthDataFormats.count > 0) {
-                [filterResutls addObject:obj];
+            if (@available(iOS 11.0, *)) {
+                if (obj.supportedDepthDataFormats.count > 0) {
+                    [filterResutls addObject:obj];
+                }
+            } else {
+                // Fallback on earlier versions
             }
         }];
     }

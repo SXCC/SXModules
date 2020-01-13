@@ -65,43 +65,48 @@
              Device:(id<MTLDevice>)device
         LibraryPath:(NSString * _Nullable)libraryPath
          BufferSize:(CGSize)bufferSize {
-    self = [super initWithFrame:frame device:device];
-    if (self) {
-        _commandQueue = [self.device newCommandQueue];
-        
-        if (libraryPath) {
-            NSError* error;
-            _library = [self.device newLibraryWithFile:libraryPath error:&error];
-            if (error) {
-                NSLog(@"[SXVideoRenderView init:][Error]: Create Metal library with input path failed!");
-                return nil;
-            }
-        } else {
-            NSBundle* frameworkBundle = [NSBundle bundleForClass:[self class]];
+    
+    if (@available(iOS 10.0, *)) {
+        self = [super initWithFrame:frame device:device];
+        if (self) {
+            _commandQueue = [self.device newCommandQueue];
+            
+            if (libraryPath) {
+                NSError* error;
+                _library = [self.device newLibraryWithFile:libraryPath error:&error];
+                if (error) {
+                    NSLog(@"[SXVideoRenderView init:][Error]: Create Metal library with input path failed!");
+                    return nil;
+                }
+            } else {
+                NSBundle* frameworkBundle = [NSBundle bundleForClass:[self class]];
 
-            NSError* error;
-            _library = [self.device newDefaultLibraryWithBundle:frameworkBundle error:&error];
-            if (error) {
-                NSLog(@"[SXVideoRenderView init:][Error]: Create Metal library with default path failed!");
+                NSError* error;
+                _library = [self.device newDefaultLibraryWithBundle:frameworkBundle error:&error];
+                if (error) {
+                    NSLog(@"[SXVideoRenderView init:][Error]: Create Metal library with default path failed!");
+                    return nil;
+                }
+            }
+            
+            CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, self.device, nil, &_textureCache);
+            if (self.textureCache == nil) {
+                NSLog(@"[SXVideoRenderView init:][Error]: Failed to create texture cache");
                 return nil;
             }
+            [self setupIntermediateTextureRenderPipeline:bufferSize];
+            [self setupPixelBufferRenderPipelineState];
+            [self setupCommonBuffers];
+            [self setupScreenRenderPipeline];
+            [self setupDrawPointPipeline];
+            [self setupMaskBlendRenderPipeline];
+            [self setPaused:true];
+            [self setEnableSetNeedsDisplay:true];
         }
-        
-        CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, self.device, nil, &_textureCache);
-        if (self.textureCache == nil) {
-            NSLog(@"[SXVideoRenderView init:][Error]: Failed to create texture cache");
-            return nil;
-        }
-        [self setupIntermediateTextureRenderPipeline:bufferSize];
-        [self setupPixelBufferRenderPipelineState];
-        [self setupCommonBuffers];
-        [self setupScreenRenderPipeline];
-        [self setupDrawPointPipeline];
-        [self setupMaskBlendRenderPipeline];
-        [self setPaused:true];
-        [self setEnableSetNeedsDisplay:true];
+        return self;
+    } else {
+        return nil;
     }
-    return self;
 }
 
 #pragma mark - draw calls
