@@ -141,6 +141,7 @@ extension ViewController: SXCameraControllerDataDelegate {
                 recordCount = recordCount + 1
             }
         }
+        renderView.drawNormalizedBox([CGPoint(x: 0.3, y: 0.3), CGPoint(x: 0.6, y: 0.3), CGPoint(x: 0.6, y: 0.6), CGPoint(x: 0.3, y: 0.6)])
         renderView.renderToScreen()
     }
     

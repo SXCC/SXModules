@@ -32,6 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints;
 - (void)drawNormalizedPoints:(NSArray *)normalizedPoints withAttr:(SXRenderPointAttr *)attr;
 - (void)blendMask:(unsigned char*)maskBytes Width:(int)width Height:(int)height Channels:(int)channels BytesPerRow:(int)rowBytes;
+- (void)drawNormalizedBox:(NSArray *)normalizedBoxPoints;
 // draw call configs
 - (void)setViewPort:(MTLViewport)newViewPort;
 - (void)clearViewPortToDefault;

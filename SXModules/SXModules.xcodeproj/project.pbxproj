@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		890EC47F2391072500982CAB /* SXCameraUtil.h in Headers */ = {isa = PBXBuildFile; fileRef = 890EC47D2391072500982CAB /* SXCameraUtil.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		890EC4802391072500982CAB /* SXCameraUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 890EC47E2391072500982CAB /* SXCameraUtil.m */; };
+		89353CEC23CF03E30097BF8A /* DrawBox.metal in Sources */ = {isa = PBXBuildFile; fileRef = 89353CEB23CF03E30097BF8A /* DrawBox.metal */; };
 		89391FBF2388D3760074B3EC /* SXModules.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FBD2388D3760074B3EC /* SXModules.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		89391FF02388D5C10074B3EC /* SXVideoRenderView.h in Headers */ = {isa = PBXBuildFile; fileRef = 89391FEE2388D5C10074B3EC /* SXVideoRenderView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89391FEF2388D5C10074B3EC /* SXVideoRenderView.mm */; };
@@ -28,6 +29,7 @@
 /* Begin PBXFileReference section */
 		890EC47D2391072500982CAB /* SXCameraUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SXCameraUtil.h; sourceTree = "<group>"; };
 		890EC47E2391072500982CAB /* SXCameraUtil.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SXCameraUtil.m; sourceTree = "<group>"; };
+		89353CEB23CF03E30097BF8A /* DrawBox.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawBox.metal; sourceTree = "<group>"; };
 		89391FBA2388D3760074B3EC /* SXModules.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SXModules.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		89391FBD2388D3760074B3EC /* SXModules.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SXModules.h; sourceTree = "<group>"; };
 		89391FBE2388D3760074B3EC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				89391FF62388D6840074B3EC /* DrawQuad.metal */,
 				89391FF72388D6840074B3EC /* DrawTargetTexture.metal */,
 				893920022388EFB30074B3EC /* BlendMaskFilter.metal */,
+				89353CEB23CF03E30097BF8A /* DrawBox.metal */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -241,6 +244,7 @@
 				890EC4802391072500982CAB /* SXCameraUtil.m in Sources */,
 				89391FF12388D5C10074B3EC /* SXVideoRenderView.mm in Sources */,
 				893920032388EFB30074B3EC /* BlendMaskFilter.metal in Sources */,
+				89353CEC23CF03E30097BF8A /* DrawBox.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -45,6 +45,8 @@
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawSampleBufferPipelineState;
 // 叠加渲染归一化特征点到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> drawNormalizedPointsPipelineState;
+// 叠加渲染归一化矩形框到intermediateTexture
+@property (strong, nonatomic) id<MTLRenderPipelineState> drawNormalizedBoxPipelineState;
 // 叠加渲染mask到intermediateTexture
 @property (strong, nonatomic) id<MTLRenderPipelineState> blendMaskPipelineState;
 
@@ -99,6 +101,7 @@
             [self setupCommonBuffers];
             [self setupScreenRenderPipeline];
             [self setupDrawPointPipeline];
+            [self setupDrawBoxPipeline];
             [self setupMaskBlendRenderPipeline];
             [self setPaused:true];
             [self setEnableSetNeedsDisplay:true];
@@ -230,6 +233,37 @@
     [commandBuffer commit];
     
 }
+
+- (void)drawNormalizedBox:(NSArray *)normalizedBoxPoints {
+    if ([normalizedBoxPoints count] != 4) {
+        return;
+    }
+    int sum = 5;
+    Vertex *buffer = (Vertex *)malloc(sizeof(Vertex) * sum);
+    for (int i = 0; i < 5; i++) {
+        NSInteger idx = i % 4;
+        CGPoint pt = [[normalizedBoxPoints objectAtIndex:idx] CGPointValue];
+        buffer[i] = {{ float((pt.x - 0.5) * 2), float((0.5 - pt.y) * 2), 0, 1}, {0, 0}};
+    }
+
+    id<MTLBuffer> drawBoxBuffer = [self.device newBufferWithLength:sizeof(Vertex) * sum options:MTLResourceStorageModeShared];
+    memcpy(drawBoxBuffer.contents, buffer, sizeof(Vertex) * sum);
+    free(buffer);
+    id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
+    self.intermediateTextureRenderDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;    // 保留intermediateTexture已有内容
+    id<MTLRenderCommandEncoder> renderCmdEncoder =
+        [commandBuffer renderCommandEncoderWithDescriptor:self.intermediateTextureRenderDesc];
+    [renderCmdEncoder setRenderPipelineState:self.drawNormalizedBoxPipelineState];
+    [renderCmdEncoder setViewport:self.intermediateDrawCallViewPort];
+    [renderCmdEncoder setVertexBuffer:drawBoxBuffer offset:0 atIndex:0];
+
+    vector_float4 ptColor = {float(1), float(0), float(0), float(1)};
+    [renderCmdEncoder setFragmentBytes:&ptColor length:sizeof(ptColor) atIndex:0];
+    [renderCmdEncoder drawPrimitives:MTLPrimitiveTypeLineStrip vertexStart:0 vertexCount:sum];
+    [renderCmdEncoder endEncoding];
+    [commandBuffer commit];
+}
+
 
 #pragma mark - draw call configs
 - (void)setViewPort:(MTLViewport)newViewPort {
@@ -418,6 +452,25 @@
       abort();
     }
 }
+
+- (void)setupDrawBoxPipeline {
+    id<MTLFunction> vertexFunc = [self.library newFunctionWithName:@"drawBoxVertexShader"];
+    id<MTLFunction> fragFunc = [self.library newFunctionWithName:@"drawBoxFragmentShader"];
+
+    MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDesc.colorAttachments[0].pixelFormat = self.colorPixelFormat;
+    pipelineDesc.vertexFunction = vertexFunc;
+    pipelineDesc.fragmentFunction = fragFunc;
+    NSError *error;
+    self.drawNormalizedBoxPipelineState =
+       [self.device newRenderPipelineStateWithDescriptor:pipelineDesc error:&error];
+    if (error) {
+     NSLog(@"%@", [error localizedDescription]);
+     abort();
+    }
+}
+
+
 
 - (void)setupIntermediateTextureRenderPipeline:(CGSize)size {
     MTLTextureDescriptor *textureDesc = [[MTLTextureDescriptor alloc] init];
