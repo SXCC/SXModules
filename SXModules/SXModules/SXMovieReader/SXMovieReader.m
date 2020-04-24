@@ -15,15 +15,17 @@
 @property (strong, nonatomic) AVAssetReader *assetReader;
 @property (strong, nonatomic) AVAssetReaderTrackOutput* assetReaderOutput;
 @property (assign, nonatomic) NSInteger currentFrameIndex;
+@property (assign, nonatomic) OSType pixelForamt;
 @end
 
 
 @implementation SXMovieReader
 
-- (id)initWithFilePath:(NSString *)movieFilePath {
+- (id)initWithFilePath:(NSString *)movieFilePath OutputPixelFormat:(OSType)pixelFormat {
     self = [super init];
     if (self) {
         self.filePath = movieFilePath;
+        self.pixelForamt = pixelFormat;
     }
     return self;
 }
@@ -43,7 +45,7 @@
     if (self.movieAssetVideoTrack == nil) {
         return false;
     }
-    self.assetReaderOutput = [[AVAssetReaderTrackOutput alloc] initWithTrack:self.movieAssetVideoTrack outputSettings:@{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)}];
+    self.assetReaderOutput = [[AVAssetReaderTrackOutput alloc] initWithTrack:self.movieAssetVideoTrack outputSettings:@{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(self.pixelForamt)}];
     if (self.assetReaderOutput == nil) {
         return false;
     }

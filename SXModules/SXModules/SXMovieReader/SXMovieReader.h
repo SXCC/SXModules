@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SXMovieReader : NSObject
 
-- (id)initWithFilePath:(NSString *)movieFilePath;
+- (id)initWithFilePath:(NSString *)movieFilePath OutputPixelFormat:(OSType)pixelFormat;
 - (BOOL)loadMovieAndStartReading;
 - (NSInteger)getCurrentFrameIndex;
 - (CMSampleBufferRef)getNextSampleBuffer:(AVAssetReaderStatus *)status;
